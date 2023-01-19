@@ -1,0 +1,96 @@
+version: '2.3'
+
+services:
+
+  nginx:
+    container_name: nginx
+    restart: always
+    build: ./01_nginx
+    ports:
+      - "80:80"
+    depends_on:
+      - gradio_frontend
+
+  gradio_frontend:
+    container_name: gradio_frontend
+    restart: always
+    build: ./02_gradio_frontend
+    ports:
+      - "7000:7000"
+    command: python -u wsgi.py
+
+  sd_text2img_app:
+    container_name: sd_txt2img_app
+    restart: always
+    build: ./03_SD_txt2img_app
+    runtime: nvidia
+    ports:
+      - "8000:8000"
+    command: gunicorn -w 1 -b 0.0.0.0:8000 wsgi:app --timeout 600 --log-level debug
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - capabilities:
+              - gpu
+    shm_size: "8gb"
+    ulimits:
+      memlock: -1
+      stack: 67108864
+    volumes:
+      - /tmp/.X11-unix:/tmp/.X11-unix:ro
+    environment:
+      - DISPLAY=$DISPLAY
+      - NVIDIA_VISIBLE_DEVICES=all
+      - PYTHONUNBUFFERED=1
+
+  sd_img2img_app:
+    container_name: sd_img2img_app
+    restart: always
+    build: ./04_SD_img2img_app
+    runtime: nvidia
+    ports:
+      - "9000:9000"
+    command: gunicorn -w 1 -b 0.0.0.0:9000 wsgi:app --timeout 600 --log-level debug
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - capabilities:
+              - gpu
+    shm_size: "8gb"
+    ulimits:
+      memlock: -1
+      stack: 67108864
+    volumes:
+      - /tmp/.X11-unix:/tmp/.X11-unix:ro
+    environment:
+      - DISPLAY=$DISPLAY
+      - NVIDIA_VISIBLE_DEVICES=all
+      - PYTHONUNBUFFERED=1
+
+  sd_inpainting_app:
+      container_name: sd_inpainting_app
+      restart: always
+      build: ./05_SD_inpainting_app
+      runtime: nvidia
+      ports:
+        - "10000:10000"
+      command: gunicorn -w 1 -b 0.0.0.0:10000 wsgi:app --timeout 600 --log-level debug
+      deploy:
+        resources:
+          reservations:
+            devices:
+              - capabilities:
+                - gpu
+      shm_size: "8gb"
+      ulimits:
+        memlock: -1
+        stack: 67108864
+      volumes:
+        - /tmp/.X11-unix:/tmp/.X11-unix:ro
+      environment:
+        - DISPLAY=$DISPLAY
+        - NVIDIA_VISIBLE_DEVICES=all
+        - PYTHONUNBUFFERED=1
+        - HF_TOKEN=$HF_TOKEN

@@ -1,0 +1,10 @@
+flask
+gunicorn
+pytest
+pytest
+gradio
+diffusers
+transformers
+accelerate
+scipy
+safetensors

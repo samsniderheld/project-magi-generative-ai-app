@@ -1,0 +1,8 @@
+flask
+gunicorn
+gradio
+diffusers
+transformers
+accelerate
+scipy
+safetensors
