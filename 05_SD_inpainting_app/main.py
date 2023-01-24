@@ -1,6 +1,6 @@
 """main.py
-The main flask interface for the inpainting SD app. 
-It takes the post variables and sends them to the 
+The main flask interface for the inpainting SD app.
+It takes the post variables and sends them to the
 diffusers pipeline.
 """
 
@@ -8,8 +8,9 @@ import base64
 
 from io import BytesIO
 from PIL import Image
-from flask import Flask, request, send_file
-from model_interface import get_stable_diffusion_inpainting_pipeline
+from flask import Flask, request
+from model_interface import (get_stable_diffusion_inpainting_pipeline,
+    change_sampler)
 
 inpaint_pipe = get_stable_diffusion_inpainting_pipeline()
 
@@ -49,6 +50,15 @@ def index():
     response_img_str = base64.b64encode(buff.getvalue()).decode("utf-8")
 
     return response_img_str
+
+@app.route("/change_sampler", methods=['POST'])
+def change_sampler_request():
+    """The main entrypoint to this container"""
+
+    new_sampler = request.form.get('new_sampler')
+    global inpaint_pipe
+    inpaint_pipe = change_sampler(inpaint_pipe,new_sampler)
+    return ('', 204)
 
 if __name__ == '__main__':
     app.run(debug=True)

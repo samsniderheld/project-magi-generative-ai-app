@@ -16,5 +16,4 @@ RUN pip install -r requirements.txt
 # Copy all the content of current directory to working directory
 COPY . .
 
-
 CMD exec gunicorn --bind :$PORT --workers 1 --threads 1 --timeout 0 main:app

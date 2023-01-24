@@ -23,6 +23,12 @@ schedulers = {
 
 }
 
+def change_sampler(pipe, scheduler):
+    """changes the scheduler"""
+    new_scheduler = schedulers[scheduler]
+    pipe.scheduler = new_scheduler.from_config(pipe.scheduler.config)
+    return pipe
+
 
 def get_stable_diffusion_pipeline():
     """This is a wrapper to return
@@ -36,8 +42,3 @@ def get_stable_diffusion_pipeline():
     return pipe
 
 
-def change_sampler(pipe, scheduler):
-    """changes the scheduler"""
-    new_scheduler = schedulers[scheduler]
-    pipe.scheduler = new_scheduler.from_config(pipe.scheduler.config)
-    return pipe

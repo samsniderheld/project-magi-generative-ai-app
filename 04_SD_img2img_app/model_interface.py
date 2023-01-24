@@ -8,8 +8,28 @@ This is to keep everything modular so that models can be updated easily
 import os
 import torch
 
-from diffusers import (StableDiffusionPipeline, EulerDiscreteScheduler,
-    StableDiffusionImg2ImgPipeline)
+from diffusers import (StableDiffusionPipeline, StableDiffusionImg2ImgPipeline,
+    EulerDiscreteScheduler, DDIMScheduler, LMSDiscreteScheduler,
+    DPMSolverMultistepScheduler, PNDMScheduler, DDPMScheduler,
+    EulerAncestralDiscreteScheduler)
+
+
+schedulers = {
+    "euler_discreet": EulerDiscreteScheduler,
+    "DDIM": DDIMScheduler,
+    "LMS": LMSDiscreteScheduler,
+    "DPM": DPMSolverMultistepScheduler,
+    "PNDM": PNDMScheduler,
+    "DDPMS":  DDPMScheduler,
+    "Euler_A": EulerDiscreteScheduler
+
+}
+
+def change_sampler(pipe, scheduler):
+    """changes the scheduler"""
+    new_scheduler = schedulers[scheduler]
+    pipe.scheduler = new_scheduler.from_config(pipe.scheduler.config)
+    return pipe
 
 def get_stable_diffusion_img2img_pipeline():
     """This is a wrapper to return

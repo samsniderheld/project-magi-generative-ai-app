@@ -24,13 +24,38 @@ samplers = [
 
 sampler_urls = {
 
-    "text2img": "http://sd_text2img_app:8000/change_sampler"
+    "text2img": "http://sd_text2img_app:8000/change_sampler",
+    "img2img": "http://sd_img2img_app:9000/change_sampler",
+    "inpainting": "http://sd_inpainting_app:10000/change_sampler",
+
 }
 
-def change_sampler(sampler):
+
+"""hacky fix until I solve
+AttributeError: 'str' object has no attribute '_id'
+"""
+
+def change_sampler_txt2img(sampler):
     """a function to call the change_sampler
     request in model_interface"""
     url = sampler_urls["text2img"]
+    data = {"new_sampler": sampler}
+
+    change_sampler_request(url,data)
+
+
+def change_sampler_img2img(sampler):
+    """a function to call the change_sampler
+    request in model_interface"""
+    url = sampler_urls["img2img"]
+    data = {"new_sampler": sampler}
+
+    change_sampler_request(url,data)
+
+def change_sampler_inpainting(sampler):
+    """a function to call the change_sampler
+    request in model_interface"""
+    url = sampler_urls["inpainting"]
     data = {"new_sampler": sampler}
 
     change_sampler_request(url,data)
@@ -40,7 +65,6 @@ def get_txt2img(prompt,negative_prompt,sampling_steps,width,height,cfg_scale):
     """
     This is the main interface between our base stable diffusion model and gradio.
     """
-
     url = "http://sd_text2img_app:8000/generate"
 
     data = {"prompt":prompt,
@@ -117,7 +141,7 @@ with gr.Blocks() as demo:
         with gr.Row():
 
             with gr.Column():
-                txt2img_sampler_input = gr.Dropdown(choices=samplers,label="Sampler",
+                txt2img_sampler_dropdown = gr.Dropdown(choices=samplers,label="Sampler",
                     value="euler_discreet")
 
                 txt2img_prompt_input = gr.Textbox(label="prompt")
@@ -151,6 +175,9 @@ with gr.Blocks() as demo:
 
             with gr.Column():
 
+                img2img_sampler_dropdown = gr.Dropdown(choices=samplers,label="Sampler",
+                    value="euler_discreet")
+
                 img2img_prompt_input = gr.Textbox(label="prompt")
                 img2img_negative_prompt_input = gr.Textbox(label="negative prompt")
                 img2img_input_img = gr.Image(label="input img")
@@ -182,6 +209,9 @@ with gr.Blocks() as demo:
         with gr.Row():
 
             with gr.Column():
+
+                inpainting_sampler_drowdown = gr.Dropdown(choices=samplers,label="Sampler",
+                    value="euler_discreet")
 
                 inpaint_prompt_input = gr.Textbox(label="prompt")
                 inpaint_negative_prompt_input = gr.Textbox(label="negative prompt")
@@ -216,6 +246,11 @@ with gr.Blocks() as demo:
     img2img_submit.click(get_img2img,inputs=img2img_inputs,outputs=img2img_output)
     inpaint_submit.click(get_inpaint,inputs=inpaint_inputs,outputs=inpaint_output)
 
-    txt2img_sampler_input.change(fn=change_sampler, inputs=txt2img_sampler_input)
+    txt2img_sampler_dropdown.change(fn=change_sampler_txt2img, inputs=txt2img_sampler_dropdown)
+
+    img2img_sampler_dropdown.change(fn=change_sampler_img2img, inputs=img2img_sampler_dropdown )
+
+    inpainting_sampler_drowdown.change(fn=change_sampler_inpainting, inputs=inpainting_sampler_drowdown)
+
 
 gradio_app = demo

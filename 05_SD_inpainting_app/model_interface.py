@@ -8,13 +8,35 @@ This is to keep everything modular so that models can be updated easily
 import os
 import torch
 
-from diffusers import StableDiffusionInpaintPipeline
+from diffusers import (StableDiffusionInpaintPipeline,
+    EulerDiscreteScheduler, DDIMScheduler, LMSDiscreteScheduler, 
+    DPMSolverMultistepScheduler, PNDMScheduler, DDPMScheduler,
+    EulerAncestralDiscreteScheduler)
 
 from huggingface_hub import login
 
 hf_token = os.environ['HF_TOKEN']
 
 login(token=hf_token )
+
+
+
+schedulers = {
+    "euler_discreet": EulerDiscreteScheduler,
+    "DDIM": DDIMScheduler,
+    "LMS": LMSDiscreteScheduler,
+    "DPM": DPMSolverMultistepScheduler,
+    "PNDM": PNDMScheduler,
+    "DDPMS":  DDPMScheduler,
+    "Euler_A": EulerDiscreteScheduler
+
+}
+
+def change_sampler(pipe, scheduler):
+    """changes the scheduler"""
+    new_scheduler = schedulers[scheduler]
+    pipe.scheduler = new_scheduler.from_config(pipe.scheduler.config)
+    return pipe
 
 def get_stable_diffusion_inpainting_pipeline():
     """This is a wrapper to return
