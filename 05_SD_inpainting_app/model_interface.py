@@ -7,6 +7,7 @@ This is to keep everything modular so that models can be updated easily
 """
 import os
 import torch
+import gc 
 
 from diffusers import (StableDiffusionInpaintPipeline,
     EulerDiscreteScheduler, DDIMScheduler, LMSDiscreteScheduler, 
@@ -46,7 +47,15 @@ def get_stable_diffusion_inpainting_pipeline():
         model_id,
         revision="fp16",
         torch_dtype=torch.float16,
-        use_auth_token=True
+        safety_checker=None
     )
     pipe = pipe.to("cuda")
     return pipe
+
+def clean_from_gpu(pipe):
+    print('removing model from memory...')
+    del pipe
+    gc.collect()
+    torch.cuda.empty_cache()
+
+    return None

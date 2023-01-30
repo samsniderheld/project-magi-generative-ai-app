@@ -5,12 +5,21 @@ The purpose is to create a total separation between the frontend and models.
 This is to keep everything modular so that models can be updated easily
 
 """
+import os
 import torch
 import gc
 
-from diffusers import (StableDiffusionPipeline, EulerDiscreteScheduler,
-    DDIMScheduler, LMSDiscreteScheduler, DPMSolverMultistepScheduler,
-    PNDMScheduler, DDPMScheduler,EulerAncestralDiscreteScheduler)
+from diffusers import (StableDiffusionInstructPix2PixPipeline,
+    EulerDiscreteScheduler, DDIMScheduler, LMSDiscreteScheduler, 
+    DPMSolverMultistepScheduler, PNDMScheduler, DDPMScheduler,
+    EulerAncestralDiscreteScheduler)
+
+from huggingface_hub import login
+
+hf_token = os.environ['HF_TOKEN']
+
+login(token=hf_token )
+
 
 
 schedulers = {
@@ -30,20 +39,17 @@ def change_sampler(pipe, scheduler):
     pipe.scheduler = new_scheduler.from_config(pipe.scheduler.config)
     return pipe
 
-
-def get_stable_diffusion_pipeline():
+def get_instruct_pix2pix_pipeline():
     """This is a wrapper to return
-    a stable diffusion text2img diffuser pipeline"""
-    model_id = "stabilityai/stable-diffusion-2"
-    # Use the Euler scheduler here instead
-    scheduler = EulerDiscreteScheduler.from_pretrained(model_id, subfolder="scheduler")
-    pipe = StableDiffusionPipeline.from_pretrained(
+    a stable diffusion instruct pix2pix pipeline"""
+    model_id = "timbrooks/instruct-pix2pix"
+    pipe = StableDiffusionInstructPix2PixPipeline.from_pretrained(
         model_id,
-        scheduler=scheduler,
         torch_dtype=torch.float16,
-        safety_checker=None,
+        safety_checker=None
     )
     pipe = pipe.to("cuda")
+
     return pipe
 
 def clean_from_gpu(pipe):
