@@ -16,9 +16,9 @@ from diffusers import (StableDiffusionInstructPix2PixPipeline,
 
 from huggingface_hub import login
 
-hf_token = os.environ['HF_TOKEN']
+# hf_token = os.environ['HF_TOKEN']
 
-login(token=hf_token )
+# login(token=hf_token )
 
 
 

@@ -2,7 +2,7 @@
 FROM pytorch/pytorch:1.12.1-cuda11.3-cudnn8-runtime
 
 # Update image
-RUN apt-get update && apt-get install -yqq git
+RUN apt-get update && apt-get install -yqq git ffmpeg libsm6 libxext6
 
 # Change working directory
 RUN mkdir /app

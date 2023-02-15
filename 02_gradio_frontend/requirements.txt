@@ -1,6 +1,7 @@
 flask
 gunicorn
 gradio
+numpy
 diffusers
 transformers
 accelerate

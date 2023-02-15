@@ -9,7 +9,7 @@ import base64
 from io import BytesIO
 from PIL import Image
 from flask import Flask, request
-
+import torch
 from model_interface import (get_stable_diffusion_img2img_pipeline, change_sampler, clean_from_gpu)
 
 img2img_pipe = None
@@ -35,13 +35,14 @@ def index():
     if img2img_pipe is None:
         print('getting pipeline...')
         img2img_pipe = get_stable_diffusion_img2img_pipeline()
-
-    image = img2img_pipe(prompt=prompt,
-        negative_prompt=negative_prompt,
-        image=input_image,
-        strength=strength,
-        num_inference_steps = sampling_steps,
-        guidance_scale = cfg_scale).images[0]
+    
+    with torch.inference_mode():
+        image = img2img_pipe(prompt=prompt,
+            negative_prompt=negative_prompt,
+            image=input_image,
+            strength=strength,
+            num_inference_steps = sampling_steps,
+            guidance_scale = cfg_scale).images[0]
 
     buff = BytesIO()
     image.save(buff, format="JPEG")

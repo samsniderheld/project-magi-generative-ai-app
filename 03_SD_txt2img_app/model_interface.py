@@ -44,6 +44,8 @@ def get_stable_diffusion_pipeline():
         safety_checker=None,
     )
     pipe = pipe.to("cuda")
+    pipe.enable_xformers_memory_efficient_attention()
+
     return pipe
 
 def clean_from_gpu(pipe):

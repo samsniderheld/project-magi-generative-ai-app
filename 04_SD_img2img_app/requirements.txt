@@ -8,3 +8,4 @@ transformers
 accelerate
 scipy
 safetensors
+xformers==0.0.16rc425

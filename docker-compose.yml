@@ -146,6 +146,32 @@ services:
         - PYTHONUNBUFFERED=1
         - HF_TOKEN=$HF_TOKEN
 
+  sd_dreambooth_app:
+      container_name: sd_dreambooth_app
+      restart: always
+      build: ./09_SD_dreambooth_app
+      runtime: nvidia
+      ports:
+        - "13000:13000"
+      command: gunicorn -w 1 -b 0.0.0.0:13000 wsgi:app --timeout 600 --log-level debug
+      deploy:
+        resources:
+          reservations:
+            devices:
+              - capabilities:
+                - gpu
+      shm_size: "8gb"
+      ulimits:
+        memlock: -1
+        stack: 67108864
+      volumes:
+        - /tmp/.X11-unix:/tmp/.X11-unix:ro
+      environment:
+        - DISPLAY=$DISPLAY
+        - NVIDIA_VISIBLE_DEVICES=all
+        - PYTHONUNBUFFERED=1
+        - HF_TOKEN=$HF_TOKEN
+
   # vq_text2img_app:
   #   container_name: vq_txt2img_app
   #   restart: always

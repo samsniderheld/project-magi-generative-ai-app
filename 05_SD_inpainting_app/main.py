@@ -5,11 +5,11 @@ diffusers pipeline.
 """
 
 import base64
-
+import torch
 from io import BytesIO
 from PIL import Image
 from flask import Flask, request
-from model_interface import (get_stable_diffusion_inpainting_pipeline, change_sampler, clean_from_gpu)
+from model_interface import (get_stable_diffusion_inpainting_pipeline, get_mask_using_clip, change_sampler, clean_from_gpu)
 
 inpaint_pipe = None
 
@@ -21,32 +21,38 @@ def index():
     prompt = request.form.get('prompt')
     negative_prompt = request.form.get('negative_prompt')
     sampling_steps = int(request.form.get('sampling_steps'))
-    height = int(request.form.get('height'))
-    width = int(request.form.get('width'))
+    #height = int(request.form.get('height'))
+    #width = int(request.form.get('width'))
     b64_img = request.form.get('init_img')
-    b64_mask = request.form.get('init_mask')
     cfg_scale = float(request.form.get('cfg_scale'))
+    radio = request.form.get('radio')
+    word_mask = request.form.get('word_mask')
 
     request_bytes_img = base64.b64decode(b64_img)
     reconstructed_bytes_img = BytesIO(request_bytes_img)
     input_image = Image.open(reconstructed_bytes_img)
 
-    request_bytes_mask = base64.b64decode(b64_mask)
-    reconstructed_bytes_mask = BytesIO(request_bytes_mask)
-    mask = Image.open(reconstructed_bytes_mask)
+    if(radio == "draw a mask above"):
+        b64_mask = request.form.get('init_mask')
+        request_bytes_mask = base64.b64decode(b64_mask)
+        reconstructed_bytes_mask = BytesIO(request_bytes_mask)
+        mask = Image.open(reconstructed_bytes_mask)
+    else:
+        mask = get_mask_using_clip(input_image, word_mask)
 
     if inpaint_pipe is None:
         print('getting pipeline...')
         inpaint_pipe = get_stable_diffusion_inpainting_pipeline()
 
-    out_img = inpaint_pipe(prompt=prompt,
-        negative_prompt=negative_prompt,
-        image=input_image,
-        mask_image=mask,
-        width=width,
-        height=height,
-        num_inference_steps = sampling_steps,
-        guidance_scale = cfg_scale).images[0]
+    with torch.inference_mode():
+        out_img = inpaint_pipe(prompt=prompt,
+            negative_prompt=negative_prompt,
+            image=input_image,
+            mask_image=mask,
+            #width=width,
+            #height=height,
+            num_inference_steps = sampling_steps,
+            guidance_scale = cfg_scale).images[0]
     
     buff = BytesIO()
     out_img.save(buff, format="JPEG")

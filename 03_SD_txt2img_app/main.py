@@ -28,8 +28,9 @@ def index():
         print("getting txt2img pipeline...")
         txt2img_pipe = get_stable_diffusion_pipeline()
 
-    image = txt2img_pipe(prompt,height,width,sampling_steps,
-        cfg_scale,negative_prompt).images[0]
+    with torch.inference_mode():
+        image = txt2img_pipe(prompt,height,width,sampling_steps,
+            cfg_scale,negative_prompt).images[0]
     
     buff = BytesIO()
     image.save(buff, format="JPEG")

@@ -32,10 +32,10 @@ def send_interrogator_request(url,data):
     """this is an api request to
     a stable diffusion containter"""
     #trigger detection app
-    interrogator_url = url
-    prompt = requests.post(interrogator_url, data=data)
-    print(prompt)
-    output = prompt.text
+
+    output = requests.post(url, data=data)
+    print(output.text)
+    output = output.text
 
     return output
 

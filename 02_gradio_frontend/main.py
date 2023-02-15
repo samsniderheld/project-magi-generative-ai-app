@@ -3,7 +3,7 @@
 This is the main entry pont for the gradio front end.
 This file creates the frontend using a gradio interface.
 Models interfaces are defined in the model_interface.py
-
+.
 """
 import base64
 import gradio as gr
@@ -11,7 +11,7 @@ from io import BytesIO
 from PIL import Image
 import gc
 import requests
-
+import numpy as np
 
 from model_interface import (send_img_request,
   change_sampler_request, send_interrogator_request)
@@ -35,6 +35,9 @@ sampler_urls = {
 
 }
 
+models_db = [
+    "runwayml/stable-diffusion-v1-5",
+]
 
 """hacky fix until I solve
 AttributeError: 'str' object has no attribute '_id'
@@ -86,7 +89,6 @@ def clean_gpu(service):
             print(url_value)
             requests.post(url_value)
 
-
 def get_txt2img(prompt,negative_prompt,sampling_steps,width,height,cfg_scale):
     """
     This is the main interface between our base stable diffusion model and gradio.
@@ -130,21 +132,29 @@ def get_img2img(prompt,negative_prompt,input_image,strength,sampling_steps,cfg_s
 
     return image
 
+def swap_word_mask(radio_option):
+    if(radio_option == "type what to mask below"):
+        return gr.update(interactive=True, placeholder="A cat")
+    else:
+        return gr.update(interactive=False, placeholder="Disabled")
 
-def get_inpaint(prompt,negative_prompt,input_image,mask,width,height,sampling_steps,cfg_scale):
+def get_inpaint(prompt,negative_prompt,input_image_dict,sampling_steps,cfg_scale, inpaint_input_radio, inpaint_input_word_mask):
     """
     This is the main interface between our inpainting model and gradio.
     """
     clean_gpu("inpainting")
     url = "http://sd_inpainting_app:10000/generate"
-
-    raw_image = Image.fromarray(input_image).resize((512,512))
+    
+    #raw_image = Image.fromarray(input_image_dict["image"]).convert("RGB").resize((512,512)) #
+    raw_image = input_image_dict["image"].convert("RGB").resize((512, 512))
     img_buff = BytesIO()
     raw_image.save(img_buff, format="JPEG")
     b64_img = base64.b64encode(img_buff.getvalue()).decode("utf-8")
 
 
-    raw_mask = Image.fromarray(mask).resize((512,512))
+    #raw_mask = Image.fromarray(input_image_dict["mask"]).convert("RGB").resize((512,512))
+    raw_mask = input_image_dict["mask"].convert("RGB").resize((512, 512))
+
     mask_buff = BytesIO()
     raw_mask.save(mask_buff, format="JPEG")
     b64_mask = base64.b64encode(mask_buff.getvalue()).decode("utf-8")
@@ -154,9 +164,11 @@ def get_inpaint(prompt,negative_prompt,input_image,mask,width,height,sampling_st
         "sampling_steps":sampling_steps,
         "init_img": b64_img,
         "init_mask": b64_mask,
-        "width": width,
-        "height": height,
-        "cfg_scale":cfg_scale}
+        #"width": width,
+        #"height": height,
+        "cfg_scale":cfg_scale,
+        "radio": inpaint_input_radio, 
+        "word_mask": inpaint_input_word_mask}
 
     image = send_img_request(url,data)
 
@@ -209,6 +221,43 @@ def get_clip_interrogator(image, model_name, mode, caption_max_lenght, caption_n
   
     return prompt
 
+def get_train_db(model_name, instance_prompt, class_prompt, steps, resolution, images):
+    """
+    This is the main interface between our interogator model and gradio.
+    """
+    #clean_gpu("dreambooth")
+
+    url = "http://SD_dreambooth_app:13000/train"
+
+    b64_images = []
+    for i, image in enumerate(images):
+        print(f'processing image {i}')
+        image = Image.open(image)
+
+        buff = BytesIO()
+        image.save(buff, format="JPEG")
+        b64_image = base64.b64encode(buff.getvalue()).decode("utf-8")
+        b64_images.append(b64_image)
+
+    data = {"model_name": model_name,
+        "instance_prompt":instance_prompt,
+        "class_prompt":class_prompt,
+        "steps": steps,
+        "resolution": resolution,
+        "b64_images": b64_images
+        }
+
+    msg  = send_interrogator_request(url,data)
+
+    return msg
+
+def upload_preview_gallery(file_imgs_input):
+    imgs = []
+    for img_input in file_imgs_input:
+        imgs.append(Image.open(img_input))
+    
+    return imgs
+
 
 # def get_vq_txt2img(prompt,sampling_steps,cfg_scale):
 #     """
@@ -225,7 +274,7 @@ def get_clip_interrogator(image, model_name, mode, caption_max_lenght, caption_n
 
 #     return image
 
-
+image_blocks = gr.Blocks()
 with gr.Blocks() as demo:
 
     with gr.Tab("text to img"):
@@ -272,7 +321,8 @@ with gr.Blocks() as demo:
 
                 img2img_prompt_input = gr.Textbox(label="prompt")
                 img2img_negative_prompt_input = gr.Textbox(label="negative prompt")
-                img2img_input_img = gr.Image(label="input img")
+                #img2img_input_img = gr.Image(label="input img")
+                img2img_input_img = gr.Image(tool='color-sketch', type='numpy', label='Input image', source='upload', interactive=True)
                 img2img_strength_input = gr.Slider(0, 1, value=.5,
                     label="strength")
                 img2img_steps_input = gr.Slider(0, 150, value=50,
@@ -307,23 +357,30 @@ with gr.Blocks() as demo:
 
                 inpaint_prompt_input = gr.Textbox(label="prompt")
                 inpaint_negative_prompt_input = gr.Textbox(label="negative prompt")
-                inpaint_input_img = gr.Image(label="input img")
-                inpaint_mask_img = gr.Image(label="mask img")
-                inpaint_width_input = gr.Slider(512,1024,256,label="width")
-                inpaint_height_input = gr.Slider(512,1024,256,label="height")
-                inpaint_steps_input = gr.Slider(0, 150, value=50,
-                    label="number of diffusion steps")
+                #inpaint_input_img = gr.Image(label="input img")
+                #inpaint_mask_img = gr.Image(label="mask img")
+                inpaint_input_img = gr.Image(source='upload', tool='sketch', elem_id="image_upload", type="pil", label="Upload")#.style(height=400)
+                #inpaint_width_input = gr.Slider(512,1024,256,label="width")
+                #inpaint_height_input = gr.Slider(512,1024,256,label="height")
+                with gr.Box(elem_id="mask_radio").style(border=False):
+                    inpaint_input_radio = gr.Radio(["draw a mask above", "type what to mask below"], value="draw a mask above", show_label=False, interactive=True).style(container=False)
+                    inpaint_input_word_mask = gr.Textbox(label = "What to find in your image", interactive=False, elem_id="word_mask", placeholder="Disabled").style(container=False)
+                inpaint_steps_input = gr.Slider(0, 150, value=50, label="number of diffusion steps")
                 inpaint_cfg_input = gr.Slider(0,30,value=7.5,label="cfg scale")
+                
+                inpaint_input_radio.change(fn=swap_word_mask, inputs=inpaint_input_radio, outputs=inpaint_input_word_mask,show_progress=False)
 
                 inpaint_inputs = [
                     inpaint_prompt_input,
                     inpaint_negative_prompt_input,
                     inpaint_input_img,
-                    inpaint_mask_img,
-                    inpaint_width_input,
-                    inpaint_height_input,
+                    #inpaint_mask_img,
+                    #inpaint_width_input,
+                    #inpaint_height_input,
                     inpaint_steps_input,
                     inpaint_cfg_input,
+                    inpaint_input_radio,
+                    inpaint_input_word_mask,
                 ]
 
             with gr.Column():
@@ -394,6 +451,40 @@ with gr.Blocks() as demo:
 
             interrogator_submit = gr.Button("Submit")
 
+    with gr.Tab("dreambooth"):
+
+        with gr.Row():
+
+            with gr.Column():
+                db_models_db_dropdown = gr.Dropdown(choices=models_db,label="Models",
+                    value="runwayml/stable-diffusion-v1-5")
+
+                db_instance_prompt_input = gr.Textbox(label="instance prompt", value="photo of zwx person")
+                db_class_prompt_input = gr.Textbox(label="class prompt", value="photo of a person")
+                db_steps_input = gr.Slider(300, 2500, 50, label="max training steps steps") 
+                db_resolution_input = gr.Slider(512,1024,256,label="resolution")
+
+            with gr.Column():
+
+                db_images_input = gr.File(file_count="multiple")
+                db_gallery = gr.Gallery(label="Generated images", show_label=False, elem_id="gallery").style(grid=[7], height='auto')
+                db_upload = gr.Button("Upload preview")
+                
+
+        with gr.Row():
+
+            db_inputs = [
+                db_models_db_dropdown,
+                db_instance_prompt_input,
+                db_class_prompt_input,
+                db_steps_input,
+                db_resolution_input,
+                db_images_input,
+            ]
+
+            db_submit = gr.Button("Train")
+            db_status_output = gr.Textbox(value="")
+
     # with gr.Tab("VQ text to img"):
 
     #     with gr.Row():
@@ -421,9 +512,12 @@ with gr.Blocks() as demo:
     # end tabs
     txt2img_submit.click(get_txt2img,inputs=txt2img_inputs,outputs=txt2img_output)
     img2img_submit.click(get_img2img,inputs=img2img_inputs,outputs=img2img_output)
-    inpaint_submit.click(get_inpaint,inputs=inpaint_inputs,outputs=inpaint_output)
+    #inpaint_submit.click(get_inpaint,inputs=inpaint_inputs,outputs=inpaint_output)
+    inpaint_submit.click(fn=get_inpaint, inputs=inpaint_inputs, outputs=inpaint_output)
     instruct_submit.click(get_instruct_pix2pix,inputs=instruct_inputs,outputs=instruct_output)
     interrogator_submit.click(get_clip_interrogator, inputs=interrogator_inputs,outputs=interrogator_output)
+    db_upload.click(upload_preview_gallery, inputs=db_images_input, outputs=db_gallery)
+    db_submit.click(get_train_db, inputs=db_inputs, outputs=db_status_output)
     # txt2img_vq_submit.click(get_vq_txt2img,inputs=txt2img_vq_inputs,outputs=txt2img_vq_output)
 
     txt2img_sampler_dropdown.change(fn=change_sampler_txt2img, inputs=txt2img_sampler_dropdown)
